@@ -1,0 +1,16 @@
+{
+  "name": "openclaw-cc",
+  "version": "0.1.0",
+  "description": "OpenClaw automation recreated with Claude Code (claude -p)",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": ["openclaw", "claude-code", "automation", "cron", "ai-agent"],
+  "license": "MIT",
+  "private": true
+}

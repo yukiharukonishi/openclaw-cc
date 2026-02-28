@@ -1,0 +1,32 @@
+{
+  "agents": {
+    "defaults": {
+      "model": "sonnet",
+      "timeoutSeconds": 300,
+      "allowedTools": "Bash,Read,Write,Edit,Grep,Glob",
+      "maxBudgetUsd": "0.50"
+    }
+  },
+  "delivery": {
+    "scanIntervalMs": 30000,
+    "maxRetries": 3,
+    "ttlMs": 300000,
+    "processingStaleMs": 300000
+  },
+  "cron": {
+    "jobsFile": "data/cron/jobs.json"
+  },
+  "session": {
+    "resetPolicy": {
+      "daily": "04:00",
+      "idleMs": 86400000
+    },
+    "dataDir": "data/sessions"
+  },
+  "telegram": {
+    "defaultChatId": "",
+    "defaultTopicId": null,
+    "allowedChatIds": [],
+    "pollingIntervalMs": 3000
+  }
+}

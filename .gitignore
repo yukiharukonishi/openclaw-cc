@@ -1,0 +1,30 @@
+# Runtime data
+data/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Internal docs
+PLANS.md
+
+# Local config (keep .example only)
+config/default.json
+
+# Node
+node_modules/
+
+# Workspace: personal data files (keep .example.md only)
+workspace/USER.md
+workspace/MEMORY.md
+workspace/GROUP_MEMORY.md
+
+# Daily memory files (generated at runtime)
+workspace/memory/*.md
+!workspace/memory/.gitkeep
+
+# Atomic write / lock artifacts
+*.tmp
+*.lock
+*.processing

@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "id": "example-heartbeat-5m",
+      "agentId": "main",
+      "name": "heartbeat-check",
+      "enabled": true,
+      "schedule": {
+        "kind": "every",
+        "every": 300000,
+        "staggerMs": 30000
+      },
+      "sessionTarget": "isolated",
+      "payload": {
+        "kind": "agentTurn",
+        "model": "haiku",
+        "message": "Check system health. If everything is normal, reply with exactly NO_REPLY. If something needs attention, describe the issue briefly.",
+        "timeoutSeconds": 60
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "telegram",
+        "to": "-1001234567890:topic:6",
+        "bestEffort": true
+      },
+      "deleteAfterRun": false,
+      "state": {
+        "lastRunAtMs": 0,
+        "lastStatus": null,
+        "consecutiveErrors": 0
+      }
+    },
+    {
+      "id": "example-noreply-demo",
+      "agentId": "main",
+      "name": "noreply-demo",
+      "enabled": false,
+      "schedule": {
+        "kind": "every",
+        "every": 60000
+      },
+      "sessionTarget": "isolated",
+      "payload": {
+        "kind": "agentTurn",
+        "model": "haiku",
+        "message": "Reply with exactly NO_REPLY",
+        "timeoutSeconds": 30
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "telegram",
+        "to": "-1001234567890:topic:6",
+        "bestEffort": true
+      },
+      "deleteAfterRun": false,
+      "state": {
+        "lastRunAtMs": 0,
+        "lastStatus": null,
+        "consecutiveErrors": 0
+      }
+    },
+    {
+      "id": "example-one-shot",
+      "agentId": "main",
+      "name": "scheduled-announcement",
+      "enabled": false,
+      "schedule": {
+        "kind": "at",
+        "at": "2026-03-01T09:00:00+09:00"
+      },
+      "sessionTarget": "isolated",
+      "payload": {
+        "kind": "agentTurn",
+        "model": "sonnet",
+        "message": "Generate a brief good morning greeting for the team.",
+        "timeoutSeconds": 60
+      },
+      "delivery": {
+        "mode": "announce",
+        "channel": "telegram",
+        "to": "-1001234567890:topic:6",
+        "bestEffort": true
+      },
+      "deleteAfterRun": true,
+      "state": {
+        "lastRunAtMs": 0,
+        "lastStatus": null,
+        "consecutiveErrors": 0
+      }
+    }
+  ]
+}
