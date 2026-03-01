@@ -81,14 +81,17 @@ cp examples/bunshin/rules/*.md .claude/rules/
 ### Step 3: 設定
 
 ```bash
-# .env に Telegram Bot Token を設定
-echo 'TELEGRAM_BOT_TOKEN=your-token-here' >> .env
-
-# config/default.json に Telegram 設定を追加
-# allowedChatIds にあなたのグループ/チャットIDを設定
+# テンプレートをコピーして、自分の値を入力
+cp .env.example .env
+cp config/default.example.json config/default.json
 ```
 
-`config/default.json` の例:
+`.env` を編集 — Telegram Bot Token を設定:
+```
+TELEGRAM_BOT_TOKEN=your-token-here
+```
+
+`config/default.json` を編集 — Telegram チャットIDを設定:
 ```json
 {
   "telegram": {
@@ -98,6 +101,8 @@ echo 'TELEGRAM_BOT_TOKEN=your-token-here' >> .env
   }
 }
 ```
+
+> **注意:** `.env` と `config/default.json` は gitignore 対象です。コミットされません。
 
 ### Step 4: CronJob の設定
 

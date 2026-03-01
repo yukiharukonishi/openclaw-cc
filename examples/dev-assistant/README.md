@@ -71,13 +71,17 @@ Replace `[PLACEHOLDER]` values in these files:
 ### Step 3: Configure
 
 ```bash
-# Set Telegram Bot Token
-echo 'TELEGRAM_BOT_TOKEN=your-token-here' >> .env
-
-# Edit config/default.json with your Telegram settings
+# Copy example files and fill in your values
+cp .env.example .env
+cp config/default.example.json config/default.json
 ```
 
-`config/default.json` example:
+Edit `.env` — set your Telegram Bot Token:
+```
+TELEGRAM_BOT_TOKEN=your-token-here
+```
+
+Edit `config/default.json` — set your Telegram chat ID:
 ```json
 {
   "telegram": {
@@ -87,6 +91,8 @@ echo 'TELEGRAM_BOT_TOKEN=your-token-here' >> .env
   }
 }
 ```
+
+> **Note:** `.env` and `config/default.json` are gitignored — they will not be committed.
 
 ### Step 4: Configure CronJob
 
