@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "id": "dev-daily-briefing",
+      "name": "Daily Dev Briefing",
+      "enabled": true,
+      "agentId": "main",
+      "schedule": {
+        "kind": "every",
+        "every": 86400000,
+        "staggerMs": 0
+      },
+      "payload": {
+        "kind": "agentTurn",
+        "model": "sonnet",
+        "message": "Produce today's development briefing using the format in AGENTS.md.\n\nCheck:\n1. Git status of tracked repos (branches, uncommitted changes)\n2. Recent commits (last 24h)\n3. Open PRs and their review status\n4. CI results (if accessible)\n5. Any blockers or risks from yesterday's memory\n\nFormat for Telegram (under 2000 chars, bullets, no tables).\nIf nothing actionable, return NO_REPLY.",
+        "timeoutSeconds": 120,
+        "workspacePath": null
+      },
+      "delivery": {
+        "channel": "telegram",
+        "to": "[YOUR_TELEGRAM_CHAT_ID]",
+        "bestEffort": true
+      }
+    }
+  ]
+}

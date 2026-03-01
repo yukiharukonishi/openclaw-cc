@@ -512,6 +512,18 @@ node --test test/*.test.js
 
 詳細: [`examples/bunshin/README.md`](examples/bunshin/README.md)
 
+### Dev Assistant — 開発AIパートナー
+
+`examples/dev-assistant/` に、openclaw-cc を使って開発支援AIアシスタントを構築するためのテンプレート集があります。
+
+特徴:
+- **英語ベース** — 国際チーム・英語プロジェクト向け
+- **開発特化** — Git 状態、PR、CI、テスト失敗の監視・要約
+- **Approval-first** — Read → Propose → Approve → Execute → Verify の安全ループ
+- **CronJob サンプル** — 毎日の開発ブリーフィング（拡張例: PRリマインド、テスト監視）
+
+詳細: [`examples/dev-assistant/README.md`](examples/dev-assistant/README.md)
+
 ## License
 
 MIT
