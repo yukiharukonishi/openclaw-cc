@@ -102,7 +102,7 @@ TELEGRAM_BOT_TOKEN=your-token-here
 }
 ```
 
-> **注意:** `.env` と `config/default.json` は gitignore 対象です。コミットされません。
+> **注意:** `.env` と `config/default.json` は gitignore 対象です。コミットされません。`git add -f` で強制追加しないでください。
 
 ### Step 4: CronJob の設定
 

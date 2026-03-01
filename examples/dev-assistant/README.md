@@ -92,7 +92,7 @@ Edit `config/default.json` — set your Telegram chat ID:
 }
 ```
 
-> **Note:** `.env` and `config/default.json` are gitignored — they will not be committed.
+> **Note:** `.env` and `config/default.json` are gitignored — they will not be committed. Do not use `git add -f` on these files.
 
 ### Step 4: Configure CronJob
 
