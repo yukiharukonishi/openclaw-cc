@@ -1,47 +1,48 @@
+> **Language:** English | [日本語](README.ja.md)
+
 # openclaw-cc — OpenClaw reproduced with Claude Code
 
-[OpenClaw](https://www.npmjs.com/package/openclaw) の自律エージェント基盤を **`claude -p`** だけで再現。Gateway 不要、ゼロ依存、Node.js 22+。
+Reproduce [OpenClaw](https://www.npmjs.com/package/openclaw)'s autonomous agent platform using only **`claude -p`**. No gateway, zero dependencies, Node.js 22+.
 
 ## What is OpenClaw?
 
-OpenClaw は「AI エージェントの人格・記憶・行動を Markdown ファイルで定義し、複数チャネルに自律的に配信する」マルチチャネル AI エージェントゲートウェイです。
+OpenClaw is a multi-channel AI agent gateway that defines agent personality, memory, and behavior through Markdown files and autonomously delivers across multiple channels.
 
-その特徴的な設計思想:
+Key design philosophy:
 
-- **Markdown でエージェントの人格を定義する** — `SOUL.md` に行動原則、`USER.md` にユーザー情報、`IDENTITY.md` にキャラクター。設定ファイルではなく、人間が読み書きできる Markdown で管理する
-- **Markdown で記憶を永続化する** — 日次ログ (`memory/YYYY-MM-DD.md`) と長期メモリ (`MEMORY.md`) に知識を蓄積。セッションが終わっても記憶が残り、次回起動時に自動で読み込まれる
-- **セッションタイプで情報量を制御する** — DM では全ファイルを読み、cron ジョブでは最小限だけ読み、グループチャットでは個人情報を含むファイルを読まない
-- **「異常なしなら黙る」NO_REPLY パターン** — エージェントが `NO_REPLY` と返せば配信をスキップ。通知疲れを防ぐ OpenClaw のコアパターン
-- **cron → agent → delivery の三層構造** — スケジュール・AI実行・配信を分離し、途中で落ちても再開できる耐障害設計
+- **Define agent personality in Markdown** — `SOUL.md` for behavior principles, `USER.md` for user info, `IDENTITY.md` for character. Managed in human-readable Markdown, not config files
+- **Persist memory in Markdown** — Accumulate knowledge in daily logs (`memory/YYYY-MM-DD.md`) and long-term memory (`MEMORY.md`). Memory survives across sessions and auto-loads on next startup
+- **Control information by session type** — DM loads all files, cron jobs load only essentials, group chats skip files containing personal info
+- **NO_REPLY pattern: "stay silent when nothing to report"** — Agent returns `NO_REPLY` to skip delivery. Prevents notification fatigue — a core OpenClaw pattern
+- **Three-layer architecture: cron → agent → delivery** — Separates scheduling, AI execution, and delivery for crash-resistant design
 
 ## What is openclaw-cc?
 
-上記の OpenClaw 設計を、**Gateway サーバーなし** で再現するプロジェクトです。
+This project reproduces the OpenClaw design **without a Gateway server**.
 
-OpenClaw は通常、Gateway サーバー（常駐プロセス + Web UI + チャネル認証）を介して動作しますが、
-「定期タスク + Telegram 通知 + Markdown 記憶管理」だけなら、もっと軽い構成で十分再現できます:
+OpenClaw normally operates through a Gateway server (persistent process + Web UI + channel auth), but for "scheduled tasks + Telegram notifications + Markdown memory management", a much lighter setup works:
 
-| OpenClaw の仕組み | openclaw-cc での再現方法 |
+| OpenClaw approach | openclaw-cc reproduction |
 |------------------|----------------------|
-| Gateway サーバーでチャネル接続 | **Telegram Bot API を直接呼び出し**（Gateway 不要） |
-| OpenClaw の AI エンジン | **`claude -p`**（Claude Code のヘッドレス CLI） |
-| Web UI でジョブ管理 | **`jobs.json`** を直接編集（ブラウザ不要） |
-| Markdown Workspace | **そのまま再現**（SOUL.md, USER.md, memory/ 等） |
-| セッション管理 + 記憶 | **そのまま再現**（daily/idle reset, JSONL 履歴） |
-| 配信キュー + リトライ | **そのまま再現**（atomic write, dead-letter） |
+| Gateway server for channel connections | **Direct Telegram Bot API calls** (no Gateway) |
+| OpenClaw AI engine | **`claude -p`** (Claude Code headless CLI) |
+| Web UI for job management | **Edit `jobs.json` directly** (no browser needed) |
+| Markdown Workspace | **Fully reproduced** (SOUL.md, USER.md, memory/, etc.) |
+| Session management + memory | **Fully reproduced** (daily/idle reset, JSONL history) |
+| Delivery queue + retry | **Fully reproduced** (atomic write, dead-letter) |
 
-### Gateway 不要 — ブラウザレスで完結
+### Gateway-free — fully browserless
 
-**不要なもの:**
-- Gateway サーバー（常駐プロセス）
-- Web UI / ブラウザ / ログインセッション
-- Webhook サーバー（このプロジェクト単体では）
+**Not needed:**
+- Gateway server (persistent process)
+- Web UI / browser / login sessions
+- Webhook server (standalone)
 
-**必要なもの:**
-- `claude -p` が動く環境（Claude Code CLI インストール済み）
+**Required:**
+- Environment where `claude -p` works (Claude Code CLI installed)
 - Node.js 22+
-- Telegram Bot Token（送信する場合のみ）
-- OS のスケジューラ（常時起動したいなら systemd / LaunchAgent 等）
+- Telegram Bot Token (only if sending)
+- OS scheduler (systemd / LaunchAgent etc., for always-on operation)
 
 ## Architecture
 
@@ -70,45 +71,45 @@ OpenClaw は通常、Gateway サーバー（常駐プロセス + Web UI + チャ
 └─────────────────────────────────────────────────────────┘
 ```
 
-## 再現できている OpenClaw 機能の詳細
+## Reproduced OpenClaw Features
 
-| OpenClaw の機能 | 何をするものか | openclaw-cc での再現 |
+| OpenClaw feature | What it does | openclaw-cc reproduction |
 |---|---|---|
-| **Markdown Workspace** | SOUL.md 等でエージェントの人格・行動原則を定義 | `workspace/*.md` + `workspace-loader.js` で再現。XML タグに変換して systemPrompt に注入 |
-| **Memory System** | 日次ログ + 長期メモリを Markdown で蓄積・読み込み | `memory-manager.js` で再現。daily は `memory/YYYY-MM-DD.md`、long-term は `MEMORY.md` |
-| **Session-type Profiles** | DM/cron/group で読み込むファイルを変える | main/cron/group の3プロファイル。group では個人情報ファイルを読まない |
-| **NO_REPLY Suppression** | 「異常なしなら黙る」— 無駄な通知を防ぐ | cron-scheduler.js で判定。空文字列 or "NO_REPLY" なら配信スキップ |
-| **Cron Scheduler** | 定期/固定時刻でエージェントを自律実行 | every(ms間隔) / at(1回) を実装。cron 式は Phase 3 |
-| **Deterministic Stagger** | 同時刻の複数ジョブの実行をズラす | `MD5(jobId) % staggerMs` — 再起動しても同じオフセット |
-| **Delivery Queue** | 配信失敗時のリトライ・dead-letter 管理 | atomic write + O_EXCL で耐障害。bestEffort(部分成功) 対応 |
-| **Session Management** | セッションの作成・リセット・アーカイブ | daily(時刻跨ぎ) + idle(24h) のリセットポリシー |
-| **Agent Loop** | AI モデルを呼び出してセッション継続 | `claude -p` の CLI session / JSONL fallback / Stateless の三段構え |
-| **Telegram Adapter** | チャネルへの配信 + 受信 | Bot API 直接呼び出し + Long Polling で双方向通信（Gateway 不要で再現）。グループ全トピック + DM 対応 |
-| **Cost-aware Model Routing** | タスク難易度に応じて Haiku/Sonnet/Opus を選択 | `payload.model` でジョブごとに指定 |
-| **Gateway** | チャネル認証・メッセージルーティング | **不要** — Bot API sendMessage で直接送信 |
+| **Markdown Workspace** | Define agent personality/principles in SOUL.md etc. | `workspace/*.md` + `workspace-loader.js`. Converted to XML tags and injected into systemPrompt |
+| **Memory System** | Accumulate daily logs + long-term memory in Markdown | `memory-manager.js`. Daily: `memory/YYYY-MM-DD.md`, long-term: `MEMORY.md` |
+| **Session-type Profiles** | Load different files for DM/cron/group | 3 profiles: main/cron/group. Group skips personal info files |
+| **NO_REPLY Suppression** | "Stay silent when nothing to report" — prevent noise | `cron-scheduler.js` checks output. Empty or "NO_REPLY" → skip delivery |
+| **Cron Scheduler** | Run agents autonomously on schedule | `every` (ms interval) / `at` (one-shot) implemented. Cron expressions planned for Phase 3 |
+| **Deterministic Stagger** | Offset concurrent jobs to avoid thundering herd | `MD5(jobId) % staggerMs` — same offset survives restarts |
+| **Delivery Queue** | Retry on failure, dead-letter management | Atomic write + O_EXCL for crash resistance. bestEffort (partial success) supported |
+| **Session Management** | Create, reset, archive sessions | daily (time-crossing) + idle (24h) reset policies |
+| **Agent Loop** | Call AI model with session continuity | Three-tier: CLI session / JSONL fallback / Stateless |
+| **Telegram Adapter** | Send + receive via channel | Direct Bot API + Long Polling for bidirectional communication (no Gateway). Group topics + DM supported |
+| **Cost-aware Model Routing** | Select Haiku/Sonnet/Opus by task difficulty | `payload.model` per job |
+| **Gateway** | Channel auth + message routing | **Not needed** — direct Bot API sendMessage |
 
 ### Cost-aware Model Routing (Haiku / Sonnet / Opus)
 
-ジョブごとに `payload.model` を指定して、タスクの難易度に応じたモデルを選択します:
+Specify `payload.model` per job to select the appropriate model for each task:
 
 ```
-haiku  → ヘルスチェック、通知要約、YES/NO 判定（低コスト）
-sonnet → 定型返信の下書き、日次レポート（標準）
-opus   → 複雑な判断、見積もり対応、クライアント案件（高精度）
+haiku  → Health checks, notification summaries, YES/NO decisions (low cost)
+sonnet → Standard reply drafts, daily reports (balanced)
+opus   → Complex decisions, estimates, client projects (highest quality)
 ```
 
-OpenClaw と同じく、全ジョブを最高モデルで回すのではなく、**難易度に応じたモデル選択でコストを最適化** する設計です。
-詳細は [`examples/jobs.example.md`](examples/jobs.example.md) を参照。
+Like OpenClaw, rather than running all jobs on the best model, **optimize cost by routing based on difficulty**.
+See [`examples/jobs.example.md`](examples/jobs.example.md) for details.
 
-### まだ再現していない機能
+### Not Yet Reproduced
 
-| 機能 | 状態 |
-|------|------|
-| Cron 式 (`0 9 * * *`) | Phase 3 予定 |
-| Session Compaction（古い履歴の要約圧縮） | Phase 3 予定 |
-| Model Failover（AI モデルの自動切替） | Phase 3 予定 |
-| Webhook 受信 | Long Polling で実装済み。Webhook は Phase 3 予定 |
-| 追加チャネル（Slack, Discord） | Phase 3 予定 |
+| Feature | Status |
+|---------|--------|
+| Cron expressions (`0 9 * * *`) | Planned for Phase 3 |
+| Session Compaction (summarize old history) | Planned for Phase 3 |
+| Model Failover (automatic model switching) | Planned for Phase 3 |
+| Webhook receiver | Long Polling implemented. Webhook planned for Phase 3 |
+| Additional channels (Slack, Discord) | Planned for Phase 3 |
 
 ## Quick Start
 
@@ -121,14 +122,14 @@ cp .env.example .env
 cp config/default.example.json config/default.json
 ```
 
-### 2. Telegram Bot を作成
+### 2. Create a Telegram Bot
 
-1. [@BotFather](https://t.me/BotFather) で `/newbot` → Bot Token を取得
-2. `.env` に記入:
+1. Use [@BotFather](https://t.me/BotFather) → `/newbot` → get Bot Token
+2. Add to `.env`:
    ```
    TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
    ```
-3. `config/default.json` を設定:
+3. Edit `config/default.json`:
    ```json
    {
      "agents": {
@@ -148,16 +149,16 @@ cp config/default.example.json config/default.json
    }
    ```
 
-> **Chat ID の調べ方**: Bot をグループに追加後、`https://api.telegram.org/bot<TOKEN>/getUpdates` にアクセスすると `chat.id` が見えます。
+> **How to find your Chat ID**: Add your bot to a group, then visit `https://api.telegram.org/bot<TOKEN>/getUpdates` to see the `chat.id`.
 
-### 3. Cron Jobs を設定
+### 3. Configure Cron Jobs
 
 ```bash
 mkdir -p data/cron
 cp examples/jobs.example.json data/cron/jobs.json
 ```
 
-`jobs.json` を編集して、Telegram の宛先を実際の値に変更:
+Edit `jobs.json` to set your Telegram destination:
 ```json
 {
   "delivery": {
@@ -169,7 +170,7 @@ cp examples/jobs.example.json data/cron/jobs.json
 
 > **Note**: Currently only `kind: "every"` and `kind: "at"` are supported. Cron expressions (`kind: "cron"`) are planned for Phase 3. Unknown kinds are logged as warnings and skipped.
 
-### 4. Workspace をセットアップ（Markdown メモリ）
+### 4. Set Up Workspace (Markdown Memory)
 
 ```bash
 cp workspace/USER.example.md workspace/USER.md
@@ -177,7 +178,7 @@ cp workspace/MEMORY.example.md workspace/MEMORY.md
 cp workspace/GROUP_MEMORY.example.md workspace/GROUP_MEMORY.md
 ```
 
-`workspace/USER.md` を編集してプロファイルを設定（必須ではないが推奨）。
+Edit `workspace/USER.md` to set your profile (recommended but not required).
 
 ### 5. Run
 
@@ -185,95 +186,94 @@ cp workspace/GROUP_MEMORY.example.md workspace/GROUP_MEMORY.md
 node src/index.js
 ```
 
-起動すると:
-1. `.env` と `config/default.json` を読み込み
-2. Delivery Queue の未処理をスキャン（再起動時の取りこぼし防止）
-3. Telegram Poller 起動（`allowedChatIds` 設定時のみ — Long Polling で受信開始）
-4. Cron Scheduler が全ジョブをスケジュール
-5. 30秒間隔で Delivery Queue を再スキャン
-6. `SIGTERM`/`SIGINT` で graceful shutdown
+On startup:
+1. Loads `.env` and `config/default.json`
+2. Scans Delivery Queue for pending items (crash recovery)
+3. Starts Telegram Poller (only when `allowedChatIds` is set — Long Polling)
+4. Cron Scheduler schedules all jobs
+5. Rescans Delivery Queue every 30 seconds
+6. Graceful shutdown on `SIGTERM`/`SIGINT`
 
-> **Note**: `allowedChatIds` が空または未設定の場合、Telegram 受信は無効（送信専用）です。
+> **Note**: If `allowedChatIds` is empty or unset, Telegram reception is disabled (send-only mode).
 
-## Cron Jobs の仕組み
+## Cron Jobs
 
-### ジョブの種類
+### Job Types
 
-| kind | 動作 | 例 |
-|------|------|-----|
-| `every` | ms 間隔で繰り返し | 5分ごとにヘルスチェック |
-| `at` | 固定時刻に1回実行 | 「明日の9時に挨拶を送る」 |
-| `cron` | cron 式 (Phase 3) | `"0 9 * * *"` |
+| kind | Behavior | Example |
+|------|----------|---------|
+| `every` | Repeat at ms interval | Health check every 5 minutes |
+| `at` | Run once at fixed time | "Send greeting tomorrow at 9 AM" |
+| `cron` | Cron expression (Phase 3) | `"0 9 * * *"` |
 
-### ジョブの実行フロー
+### Execution Flow
 
 ```
-1. CronScheduler が setTimeout でジョブをスケジュール
-2. 時刻到達 → SessionManager でセッション解決
-3. AgentRunner が claude -p を実行
-   - Workspace Context を systemPrompt に自動注入
-   - sessionType に応じたファイルだけをロード
-4. 出力が "NO_REPLY" → 配信スキップ（異常なしの意味）
-5. 出力あり → DeliveryQueue に enqueue
-6. DeliveryQueue → Telegram Adapter → Bot API で送信
+1. CronScheduler schedules job via setTimeout
+2. Time reached → SessionManager resolves session
+3. AgentRunner executes claude -p
+   - Workspace Context auto-injected into systemPrompt
+   - Only files matching sessionType are loaded
+4. Output is "NO_REPLY" → skip delivery (means "nothing to report")
+5. Output present → enqueue to DeliveryQueue
+6. DeliveryQueue → Telegram Adapter → Bot API send
 ```
 
-### NO_REPLY パターン
+### NO_REPLY Pattern
 
-Agent が `NO_REPLY` と返すと配信をスキップします。
-これにより「異常なし」のとき無駄な通知が飛びません:
+When the agent returns `NO_REPLY`, delivery is skipped.
+This prevents unnecessary notifications when nothing needs attention:
 
 ```
 message: "Check system health. If everything is normal, reply with exactly NO_REPLY."
 ```
 
-### Stagger（実行時刻ズラし）
+### Stagger (Execution Offset)
 
-同じ interval の複数ジョブが同時実行されるのを防ぎます:
+Prevents multiple jobs with the same interval from firing simultaneously:
 ```
 delay = MD5(jobId) % staggerMs
 ```
-再起動しても同じオフセットが再現される決定論的アルゴリズムです。
+Deterministic algorithm — same offset reproduces even after restarts.
 
 ## Markdown Memory System
 
-OpenClaw の最も特徴的な機能を再現しています。
-エージェントの「人格」「記憶」「スキル」を **Markdown ファイル** で管理します。
+Reproduces OpenClaw's most distinctive feature.
+Agent "personality", "memory", and "skills" are managed in **Markdown files**.
 
-### Workspace ファイル構成
+### Workspace File Structure
 
 ```
 workspace/
-├── SOUL.md              ← エージェントの行動原則（全セッションで必ず読む）
-├── USER.md              ← ユーザープロファイル（main/group で読む）
-├── IDENTITY.md          ← エージェント名、タイプ、キャラクター
-├── TOOLS.md             ← 利用可能なツール・API一覧
-├── AGENTS.md            ← セッション開始手順、メモリ管理ルール、グループチャット行動指針
-├── HEARTBEAT.md         ← ヘルスチェック用チェックリスト
-├── BOOTSTRAP.md         ← 初回セットアップ（完了後に削除）
-├── MEMORY.md            ← 長期メモリ（main セッションのみ読み込み）
-├── GROUP_MEMORY.md      ← グループ共有メモリ（個人情報なし）
+├── SOUL.md              ← Agent behavior principles (loaded in all sessions)
+├── USER.md              ← User profile (loaded in main/group)
+├── IDENTITY.md          ← Agent name, type, character
+├── TOOLS.md             ← Available tools/API list
+├── AGENTS.md            ← Session startup procedure, memory management rules
+├── HEARTBEAT.md         ← Health check checklist
+├── BOOTSTRAP.md         ← First-run onboarding (delete after use)
+├── MEMORY.md            ← Long-term memory (main session only)
+├── GROUP_MEMORY.md      ← Group shared memory (no personal info)
 └── memory/
-    ├── 2026-03-01.md    ← 今日の日次ログ
-    └── 2026-02-28.md    ← 昨日のログ（today + yesterday を自動読み込み）
+    ├── 2026-03-01.md    ← Today's daily log
+    └── 2026-02-28.md    ← Yesterday's log (today + yesterday auto-loaded)
 ```
 
-### Session Type によるロード制御
+### Session Type Load Control
 
-エージェント実行時に `sessionType` を指定することで、読み込むファイルが変わります:
+Specify `sessionType` at execution to control which files are loaded:
 
-| sessionType | 読むファイル | ユースケース |
-|-------------|-------------|-------------|
-| **main** (デフォルト) | SOUL, USER, IDENTITY, AGENTS, TOOLS, MEMORY, daily memory, BOOTSTRAP | 通常のDM対話 |
-| **cron** | SOUL, IDENTITY, AGENTS | 定期ジョブ（軽量、トークン節約） |
-| **group** | SOUL, USER, IDENTITY, AGENTS, GROUP_MEMORY, daily memory | グループチャット（MEMORY.mdは読まない=個人情報保護） |
+| sessionType | Files loaded | Use case |
+|-------------|-------------|----------|
+| **main** (default) | SOUL, USER, IDENTITY, AGENTS, TOOLS, MEMORY, daily memory, BOOTSTRAP | Normal DM conversation |
+| **cron** | SOUL, IDENTITY, AGENTS | Scheduled jobs (lightweight, saves tokens) |
+| **group** | SOUL, USER, IDENTITY, AGENTS, GROUP_MEMORY, daily memory | Group chat (skips MEMORY.md = personal data protection) |
 
-> **安全設計**: sessionType 未指定時は `"main"`（全ロード）がデフォルト。忘れても情報が足りなくなる方向には倒れません。
+> **Safe by default**: When sessionType is unspecified, defaults to `"main"` (full load). Even if forgotten, it never fails due to missing information.
 
-### コンテキスト注入の仕組み
+### Context Injection
 
-Agent Runner が `claude -p` を呼ぶ前に、Workspace Loader が Markdown ファイルを読み込み、
-**XML タグで囲んで systemPrompt の先頭に自動注入** します:
+Before Agent Runner calls `claude -p`, Workspace Loader reads Markdown files and **auto-injects them as XML tags at the start of systemPrompt**:
 
 ```xml
 <SOUL>
@@ -290,22 +290,22 @@ Timezone: Asia/Tokyo
 All systems normal.
 </DAILY_MEMORY_2026-03-01>
 
-(ここに元の systemPrompt が続く)
+(original systemPrompt continues here)
 ```
 
-### トークン圧迫対策
+### Token Budget Management
 
-`maxContextChars`（デフォルト 8000 文字）を超えた場合、優先度の低いものから自動で削ります:
+When context exceeds `maxContextChars` (default 8000 chars), lower-priority items are automatically trimmed:
 
-| 優先度 | ファイル | 理由 |
-|--------|---------|------|
-| 1 (保持) | SOUL, USER, BOOTSTRAP | エージェントの基本動作に必須 |
-| 2 (中) | IDENTITY, TOOLS, daily memory | あると良いが必須ではない |
-| 3 (最後に削る) | MEMORY, GROUP_MEMORY | 長大になりやすいため |
+| Priority | Files | Reason |
+|----------|-------|--------|
+| 1 (keep) | SOUL, USER, BOOTSTRAP | Essential for agent behavior |
+| 2 (medium) | IDENTITY, TOOLS, daily memory | Useful but not critical |
+| 3 (trim last) | MEMORY, GROUP_MEMORY | Tend to grow large |
 
 ### Memory Manager
 
-日次メモリと長期メモリのファイル管理を行います:
+Handles daily and long-term memory file management:
 
 ```javascript
 import { MemoryManager } from "./src/memory-manager.js";
@@ -313,49 +313,49 @@ import { MemoryManager } from "./src/memory-manager.js";
 const mm = new MemoryManager({ workspacePath: "./workspace" });
 await mm.init();
 
-// 日次ログに追記 → workspace/memory/2026-03-01.md
+// Append to daily log → workspace/memory/2026-03-01.md
 await mm.appendDaily({
   title: "Heartbeat check",
   body: "All systems normal. CPU 23%, memory 45%."
 });
 
-// 長期メモリに追記 → workspace/MEMORY.md
+// Append to long-term memory → workspace/MEMORY.md
 await mm.appendLongTerm({
   title: "Server restart pattern",
   body: "Server tends to need restart on Mondays after batch processing."
 });
 
-// 30日より古い日次ログを削除
+// Delete daily logs older than 30 days
 await mm.pruneOldDaily();
 ```
 
-## Telegram 接続
+## Telegram Integration
 
-### 前提
+### Prerequisites
 
-- Telegram Bot Token を取得済み（@BotFather で作成）
-- Bot をグループに追加済み
+- Telegram Bot Token obtained (created via @BotFather)
+- Bot added to group
 
-### 動作モデル
+### Bidirectional Model
 
-openclaw-cc の Telegram 連携は **双方向** です:
+openclaw-cc's Telegram integration is **bidirectional**:
 
 ```
-送信（Cron → 通知）:
+Send (Cron → notification):
   Cron Job → Agent Runner → Delivery Queue → Telegram Adapter → sendMessage
 
-受信（ユーザー → Bot）:
-  getUpdates (Long Polling) → TelegramPoller → Agent Runner → sendMessage で直接応答
+Receive (User → Bot):
+  getUpdates (Long Polling) → TelegramPoller → Agent Runner → sendMessage reply
 ```
 
-受信時は **Stateless モード** (`--no-session-persistence`) で実行されます。
-これにより連続メッセージでも安定動作し、セッション破損が起きません。
+On receive, the agent runs in **Stateless mode** (`--no-session-persistence`).
+This ensures stable operation across continuous messages without session corruption.
 
-安全制限も自動適用されます:
-- `--allowedTools Bash,Read,Write,Edit,Grep,Glob` — ツール制限
-- `--max-budget-usd 0.50` — コスト上限（設定で変更可能）
+Safety limits are automatically applied:
+- `--allowedTools Bash,Read,Write,Edit,Grep,Glob` — tool restrictions
+- `--max-budget-usd 0.50` — cost cap (configurable)
 
-受信を有効にするには `config/default.json` に `allowedChatIds` を設定します:
+To enable reception, set `allowedChatIds` in `config/default.json`:
 
 ```json
 {
@@ -366,26 +366,26 @@ openclaw-cc の Telegram 連携は **双方向** です:
 }
 ```
 
-**allowedChatIds のフォーマット:**
+**allowedChatIds format:**
 ```
-"-1001234567890"              → グループ全体（全トピック許可）
-"-1001234567890:topic:6"      → グループ内の特定トピックのみ許可
-"123456789"                   → DM（個人チャット）を許可
-```
-
-`allowedChatIds` が空の場合、受信は無効（送信専用）のまま動作します。
-
-### 宛先フォーマット
-
-OpenClaw 互換の `"to"` フォーマット:
-```
-"-1001234567890"              → グループへ送信
-"-1001234567890:topic:6"      → グループ内のトピック6へ送信
+"-1001234567890"              → Entire group (all topics allowed)
+"-1001234567890:topic:6"      → Only specific topic within group
+"123456789"                   → DM (personal chat)
 ```
 
-### 4096 文字チャンク
+If `allowedChatIds` is empty, reception stays disabled (send-only mode).
 
-Telegram の1メッセージ上限は4096文字。長いメッセージは改行優先で自動分割されます。
+### Destination Format
+
+OpenClaw-compatible `"to"` format:
+```
+"-1001234567890"              → Send to group
+"-1001234567890:topic:6"      → Send to topic 6 within group
+```
+
+### 4096-Character Chunking
+
+Telegram's per-message limit is 4096 characters. Long messages are automatically split, preferring line breaks.
 
 ## Requirements
 
@@ -401,32 +401,32 @@ Telegram の1メッセージ上限は4096文字。長いメッセージは改行
 
 ### Three-Tier Agent Runner
 
-用途に応じて3つの実行モードを自動選択:
+Automatically selects from 3 execution modes based on use case:
 
-- **Mode 1 (CLI session)**: `claude -p --session-id UUID` — Claude Code がセッションを自動管理。Cron ジョブの継続実行に最適
-- **Mode 2 (JSONL fallback)**: 自前で `{sessionId}.jsonl` を管理し、プロンプトに注入 — Mode 1 が使えない環境の保険
-- **Mode 3 (Stateless)**: `claude -p --no-session-persistence` — 毎回新規セッション。チャットメッセージ（Telegram 受信）に使用
+- **Mode 1 (CLI session)**: `claude -p --session-id UUID` — Claude Code manages sessions automatically. Ideal for continuous cron job execution
+- **Mode 2 (JSONL fallback)**: Self-managed `{sessionId}.jsonl` with prompt injection — fallback when Mode 1 is unavailable
+- **Mode 3 (Stateless)**: `claude -p --no-session-persistence` — fresh session each time. Used for chat messages (Telegram reception)
 
-Mode 1/2 は初回実行時に自動検出し、結果をキャッシュ。Mode 3 は `noSessionPersistence: true` で明示的に選択します。
+Mode 1/2 auto-detected on first run with result cached. Mode 3 is explicitly selected via `noSessionPersistence: true`.
 
 ### Crash Resistance
 
-- **Atomic write**: `.tmp` + `rename` パターン — プロセス途中停止でもファイル破損しない
-- **File lock**: `.lock` + O_EXCL — 排他制御（stale lock は TTL で自動解放）
-- **Processing flag**: `.processing` ファイルで二重処理防止（configurable stale 判定）
-- **Memory writes**: 全 append 操作に `withLock()` 排他制御
+- **Atomic write**: `.tmp` + `rename` pattern — no file corruption even on mid-process crash
+- **File lock**: `.lock` + O_EXCL — exclusive access (stale locks auto-released by TTL)
+- **Processing flag**: `.processing` file prevents double processing (configurable stale detection)
+- **Memory writes**: All append operations use `withLock()` for exclusive access
 
-### Personal Data Protection (OSS向け)
+### Personal Data Protection (for OSS)
 
-`workspace/USER.md`, `workspace/MEMORY.md`, `workspace/GROUP_MEMORY.md` は **gitignore 対象** です。
-リポジトリにはテンプレート（`.example.md`）のみが含まれます:
+`workspace/USER.md`, `workspace/MEMORY.md`, `workspace/GROUP_MEMORY.md` are **gitignored**.
+Only templates (`.example.md`) are tracked in the repository:
 
 ```
-workspace/USER.example.md      ← git 追跡（テンプレート）
-workspace/USER.md              ← .gitignore（ユーザーがコピーして編集）
+workspace/USER.example.md      ← git-tracked (template)
+workspace/USER.md              ← .gitignore (user copies and edits)
 ```
 
-`git add .` しても個人データが公開リポジトリに混入しません。
+Personal data won't leak to public repositories even with `git add .`.
 
 ## Project Structure
 
@@ -500,29 +500,29 @@ node --test test/*.test.js
 
 ## Examples
 
-### BUNSHIN — ビジネスAIパートナー
+### BUNSHIN — Business AI Partner
 
-`examples/bunshin/` に、openclaw-cc を使って自律型ビジネスAIパートナーを構築するためのテンプレート集があります。
+`examples/bunshin/` contains a template set for building an autonomous business AI partner with openclaw-cc.
 
-特徴:
-- **日本語対応** — workspace ファイルが日本語で記述済み
-- **ビジネス特化** — クライアント管理、プロジェクト管理、チーム管理のテンプレート
-- **コンテキスト中心設計** — 「メッセージが来た→処理」ではなく「全情報を持ち先回り行動」
-- **CronJob サンプル** — 朝のブリーフィング + 1時間ごとの先回りチェック
+Features:
+- **Japanese language** — workspace files written in Japanese
+- **Business-focused** — client management, project management, team management templates
+- **Context-driven design** — "know everything and act proactively" instead of "react to messages"
+- **CronJob samples** — morning briefing + hourly proactive checks
 
-詳細: [`examples/bunshin/README.md`](examples/bunshin/README.md)
+Details: [`examples/bunshin/README.md`](examples/bunshin/README.md)
 
-### Dev Assistant — 開発AIパートナー
+### Dev Assistant — Development AI Partner
 
-`examples/dev-assistant/` に、openclaw-cc を使って開発支援AIアシスタントを構築するためのテンプレート集があります。
+`examples/dev-assistant/` contains a template set for building a development-focused AI assistant with openclaw-cc.
 
-特徴:
-- **英語ベース** — 国際チーム・英語プロジェクト向け
-- **開発特化** — Git 状態、PR、CI、テスト失敗の監視・要約
-- **Approval-first** — Read → Propose → Approve → Execute → Verify の安全ループ
-- **CronJob サンプル** — 毎日の開発ブリーフィング（拡張例: PRリマインド、テスト監視）
+Features:
+- **English-based** — for international teams and English projects
+- **Development-focused** — Git status, PR, CI, test failure monitoring and summaries
+- **Approval-first** — Read → Propose → Approve → Execute → Verify safety loop
+- **CronJob samples** — daily dev briefing (extensions: PR reminders, test monitoring)
 
-詳細: [`examples/dev-assistant/README.md`](examples/dev-assistant/README.md)
+Details: [`examples/dev-assistant/README.md`](examples/dev-assistant/README.md)
 
 ## License
 
