@@ -10,7 +10,7 @@
  *   → Mode 1 が使えない場合の保険。
  *
  * Mode 3 (Stateless): claude -p --no-session-persistence
- *   → チャットメッセージ用。毎回新規セッション。telegram-bridge.js 互換。
+ *   → チャットメッセージ用。毎回新規セッション。
  *
  * 初回実行時に Mode 1 を試し、成功すれば以後も Mode 1。
  * 失敗すれば Mode 2 にフォールバックし、結果をキャッシュ。
@@ -96,7 +96,7 @@ export class AgentRunner {
       }
     }
 
-    // Mode 3: Stateless（チャットメッセージ用 — telegram-bridge.js 互換）
+    // Mode 3: Stateless（チャットメッセージ用 — 毎回新規セッション）
     if (noSessionPersistence) {
       return this._runStateless({
         model, message, timeout, systemPrompt: effectiveSystemPrompt,
@@ -111,7 +111,13 @@ export class AgentRunner {
     }
 
     if (detectedMode === "cli") {
-      return this._runCLI({ sessionId, agentId, model, message, timeout, systemPrompt: effectiveSystemPrompt, workspacePath });
+      const result = await this._runCLI({ sessionId, agentId, model, message, timeout, systemPrompt: effectiveSystemPrompt, workspacePath, allowedTools });
+      // CLI session が空応答を返した場合は JSONL にフォールバック
+      if (!result.text && result.exitCode === 0) {
+        logger.warn(MODULE, "CLI session returned empty, falling back to JSONL", { sessionId });
+        return this._runJSONL({ sessionId, agentId, model, message, timeout, systemPrompt: effectiveSystemPrompt, workspacePath });
+      }
+      return result;
     }
 
     return this._runJSONL({ sessionId, agentId, model, message, timeout, systemPrompt: effectiveSystemPrompt, workspacePath });
@@ -145,11 +151,15 @@ export class AgentRunner {
    * Mode 1: CLI セッション（理想）
    * claude -p --session-id UUID --model MODEL
    */
-  async _runCLI({ sessionId, agentId, model, message, timeout, systemPrompt, workspacePath }) {
+  async _runCLI({ sessionId, agentId, model, message, timeout, systemPrompt, workspacePath, allowedTools }) {
     const args = ["-p", "--session-id", sessionId, "--model", model];
 
     if (systemPrompt) {
       args.push("--system-prompt", systemPrompt);
+    }
+    // --allowedTools: 権限確認なしで実行を許可するツールを指定（自動承認）
+    if (allowedTools) {
+      args.push("--allowedTools", allowedTools);
     }
 
     const result = await this._execClaude({
@@ -176,7 +186,7 @@ export class AgentRunner {
   }
 
   /**
-   * Mode 3: Stateless（チャット用 — telegram-bridge.js 互換）
+   * Mode 3: Stateless
    * claude -p --no-session-persistence --model MODEL
    * 毎回新規セッション。セッション再利用の問題を回避。
    */

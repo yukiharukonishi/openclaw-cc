@@ -27,6 +27,7 @@
     "defaultChatId": "",
     "defaultTopicId": null,
     "allowedChatIds": [],
-    "pollingIntervalMs": 3000
+    "pollingIntervalMs": 3000,
+    "sessionPersistence": true
   }
 }

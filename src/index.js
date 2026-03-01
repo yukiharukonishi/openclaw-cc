@@ -26,6 +26,7 @@ import { CronScheduler } from "./cron-scheduler.js";
 import { SessionManager } from "./session-manager.js";
 import { createAdapter as createTelegramAdapter, sendMessage as telegramSendMessage } from "./channel-adapters/telegram.js";
 import { TelegramPoller } from "./channel-receivers/telegram-poller.js";
+import { MemoryManager } from "./memory-manager.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -160,6 +161,14 @@ async function main() {
     sessionManager,
   });
 
+  // 7.5. Memory Manager
+  const memoryManager = new MemoryManager({
+    workspacePath: path.join(ROOT, "workspace"),
+    retainDays: 30,
+  });
+  await memoryManager.init();
+  logger.info(MODULE, "memory manager initialized");
+
   // 8. 起動時 delivery queue スキャン
   const initialStats = await deliveryQueue.processAll();
   if (initialStats.processed > 0) {
@@ -182,8 +191,10 @@ async function main() {
         timeoutMs: (config.agents.defaults.timeoutSeconds || 300) * 1000,
         workspacePath: path.join(ROOT, "workspace"),
         allowedTools: config.agents.defaults.allowedTools || "Bash,Read,Write,Edit,Grep,Glob",
-        maxBudgetUsd: config.agents.defaults.maxBudgetUsd || "0.50",
+        maxBudgetUsd: config.agents.defaults.maxBudgetUsd,
+        sessionPersistence: config.telegram.sessionPersistence !== false,
       },
+      memoryManager,
     });
     await telegramPoller.start();
     logger.info(MODULE, "telegram poller started", {

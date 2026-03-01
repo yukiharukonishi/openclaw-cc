@@ -7,7 +7,7 @@
  * - allowedChatIds ホワイトリストでアクセス制御
  * - offset を atomic write で永続化（crash 復帰対応）
  *
- * リファレンス: telegram-bridge.js パターン
+ * セッション維持は agentConfig.sessionPersistence で制御（デフォルト: true）
  */
 
 import path from "node:path";
@@ -27,7 +27,8 @@ export class TelegramPoller {
    * @param {Function} opts.sendMessage - channel-adapters/telegram.js の sendMessage
    * @param {string} opts.stateDir - offset 保存先ディレクトリ
    * @param {number} [opts.pollingIntervalMs=3000]
-   * @param {object} [opts.agentConfig] - { model, timeoutMs, workspacePath, systemPrompt }
+   * @param {object} [opts.agentConfig] - { model, timeoutMs, workspacePath, systemPrompt, sessionPersistence }
+   * @param {object} [opts.memoryManager] - MemoryManager インスタンス（日次メモリ記録用、オプショナル）
    * @param {Function} [opts.fetchImpl] - テスト用 fetch 注入
    */
   constructor({
@@ -39,6 +40,7 @@ export class TelegramPoller {
     stateDir,
     pollingIntervalMs = 3000,
     agentConfig = {},
+    memoryManager,
     fetchImpl,
   }) {
     this.botToken = botToken;
@@ -49,6 +51,7 @@ export class TelegramPoller {
     this.stateDir = stateDir;
     this.pollingIntervalMs = pollingIntervalMs;
     this.agentConfig = agentConfig;
+    this.memoryManager = memoryManager || null;
     this._fetch = fetchImpl || globalThis.fetch;
 
     this.offset = 0;
@@ -179,7 +182,10 @@ export class TelegramPoller {
 
     const session = await this.sessionManager.resolve(sessionKey, "main");
 
-    // Agent 実行（stateless — telegram-bridge.js 互換）
+    // Agent 実行
+    // sessionPersistence: true（デフォルト）→ セッション維持ON
+    // sessionPersistence: false → 毎回リセット（旧動作）
+    const sessionPersistence = this.agentConfig.sessionPersistence !== false;
     const sessionType = chatType === "private" ? "main" : "group";
     const result = await this.agentRunner.run({
       sessionId: session.sessionId,
@@ -190,7 +196,7 @@ export class TelegramPoller {
       systemPrompt: this.agentConfig.systemPrompt,
       workspacePath: this.agentConfig.workspacePath,
       sessionType,
-      noSessionPersistence: true,
+      noSessionPersistence: !sessionPersistence,
       allowedTools: this.agentConfig.allowedTools,
       maxBudgetUsd: this.agentConfig.maxBudgetUsd,
     });
@@ -206,6 +212,18 @@ export class TelegramPoller {
       logger.info(MODULE, "reply sent", { chatId, topicId, len: responseText.length });
     } catch (err) {
       logger.error(MODULE, "reply failed", { chatId, err: err.message });
+    }
+
+    // 日次メモリに会話を記録（memoryManager がある場合のみ）
+    if (this.memoryManager) {
+      try {
+        await this.memoryManager.appendDaily({
+          title: `Telegram: ${fromUser}`,
+          body: `**Q:** ${text}\n**A:** ${responseText.substring(0, 200)}${responseText.length > 200 ? "..." : ""}`,
+        });
+      } catch (err) {
+        logger.error(MODULE, "memory append failed", { err: err.message });
+      }
     }
   }
 
