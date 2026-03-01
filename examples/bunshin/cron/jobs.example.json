@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "id": "daily-briefing",
+      "name": "朝のブリーフィング",
+      "enabled": true,
+      "agentId": "main",
+      "schedule": {
+        "kind": "every",
+        "every": 86400000,
+        "staggerMs": 0
+      },
+      "payload": {
+        "kind": "agentTurn",
+        "model": "sonnet",
+        "message": "朝のブリーフィングを作成してください。\n\n以下のファイルを Read して、今日の概要をまとめてください:\n1. data/tasks.json — 未処理タスク（status !== 'completed'）を優先度別に整理\n2. data/email/envelopes.json — 直近3日のメール\n\nフォーマット: Telegram 用（2000文字以内、箇条書き、テーブル不可）\n報告不要なら NO_REPLY と返してください。",
+        "timeoutSeconds": 120,
+        "workspacePath": null
+      },
+      "delivery": {
+        "channel": "telegram",
+        "to": "[YOUR_TELEGRAM_CHAT_ID]",
+        "bestEffort": true
+      }
+    },
+    {
+      "id": "proactive-check",
+      "name": "先回りチェック",
+      "enabled": true,
+      "agentId": "main",
+      "schedule": {
+        "kind": "every",
+        "every": 3600000,
+        "staggerMs": 300000
+      },
+      "payload": {
+        "kind": "agentTurn",
+        "model": "haiku",
+        "message": "先回りチェックを実行してください。\n\ndata/tasks.json を Read し、以下を確認:\n1. 24時間以上未対応の reply_needed タスク\n2. 今日が期限の schedule タスク\n3. 高優先度タスクの状態変化\n\n注意が必要なものがあれば簡潔に報告（Telegram形式、箇条書き）。\n特になければ NO_REPLY と返してください。",
+        "timeoutSeconds": 60
+      },
+      "delivery": {
+        "channel": "telegram",
+        "to": "[YOUR_TELEGRAM_CHAT_ID]",
+        "bestEffort": true
+      }
+    }
+  ]
+}

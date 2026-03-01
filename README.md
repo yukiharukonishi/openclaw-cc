@@ -498,6 +498,20 @@ node --test test/*.test.js
 - [ ] Model failover (primary → fallback)
 - [ ] Additional channel adapters (Slack, Discord)
 
+## Examples
+
+### BUNSHIN — ビジネスAIパートナー
+
+`examples/bunshin/` に、openclaw-cc を使って自律型ビジネスAIパートナーを構築するためのテンプレート集があります。
+
+特徴:
+- **日本語対応** — workspace ファイルが日本語で記述済み
+- **ビジネス特化** — クライアント管理、プロジェクト管理、チーム管理のテンプレート
+- **コンテキスト中心設計** — 「メッセージが来た→処理」ではなく「全情報を持ち先回り行動」
+- **CronJob サンプル** — 朝のブリーフィング + 1時間ごとの先回りチェック
+
+詳細: [`examples/bunshin/README.md`](examples/bunshin/README.md)
+
 ## License
 
 MIT

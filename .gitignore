@@ -1,5 +1,6 @@
 # Runtime data
 data/
+!examples/**/data/
 
 # Secrets
 .env
@@ -23,6 +24,16 @@ workspace/GROUP_MEMORY.md
 # Daily memory files (generated at runtime)
 workspace/memory/*.md
 !workspace/memory/.gitkeep
+
+# Examples runtime copies (never commit)
+examples/**/workspace/USER.md
+examples/**/workspace/MEMORY.md
+examples/**/workspace/GROUP_MEMORY.md
+examples/**/workspace/memory/*.md
+examples/**/config/default.json
+examples/**/.env
+examples/**/.env.*
+!examples/**/.env.example
 
 # Atomic write / lock artifacts
 *.tmp
